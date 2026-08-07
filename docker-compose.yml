@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      BACKEND_PORT: 8000
+      FRONTEND_ORIGIN: http://localhost:5173
+      ARTIFACTS_PATH: ./ml/artifacts
+    volumes:
+      - ./ml/artifacts:/app/ml/artifacts
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_BASE_URL: http://backend:8000

@@ -1,0 +1,5 @@
+[
+  {"id": "asset-1", "name": "Elevator #7", "type": "Elevator", "risk_level": "High", "maintenance_days": 12, "details": {"asset_type": "ai4i"}, "history": [{"sensor": "vibration", "value": 0.82}, {"sensor": "temperature", "value": 0.75}]},
+  {"id": "asset-2", "name": "HVAC Unit B", "type": "HVAC", "risk_level": "Medium", "maintenance_days": 20, "details": {"asset_type": "ai4i"}, "history": [{"sensor": "vibration", "value": 0.34}, {"sensor": "temperature", "value": 0.41}]},
+  {"id": "asset-3", "name": "Pump #3", "type": "Pump", "risk_level": "Critical", "maintenance_days": 7, "details": {"asset_type": "cmapss"}, "history": [{"sensor": "vibration", "value": 0.93}, {"sensor": "temperature", "value": 0.89}]}
+]
