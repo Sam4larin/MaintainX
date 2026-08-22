@@ -1,5 +1,7 @@
 import json
+import sys
 from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import numpy as np
 import pandas as pd
@@ -8,47 +10,83 @@ from torch import nn
 
 from ml.config import ARTIFACTS_DIR
 
+SENSOR_COLS = [f'sensor_measurement_{i}' for i in range(1, 22)]
+
 
 class ForecastingLSTM(nn.Module):
-    def __init__(self, input_size: int):
+    """Forecasts all present CMAPSS sensor readings `horizon` cycles ahead
+    from a `history_length`-cycle window of ALL input features (sensors +
+    operational settings). Output width is n_targets * horizon, reshaped
+    to (batch, horizon, n_targets) at inference time.
+    """
+    def __init__(self, input_size: int, n_targets: int, horizon: int = 2):
         super().__init__()
-        self.lstm = nn.LSTM(input_size, 8, batch_first=True)
-        self.fc = nn.Linear(8, 1)
+        self.horizon = horizon
+        self.n_targets = n_targets
+        self.lstm = nn.LSTM(input_size, 32, batch_first=True)
+        self.fc = nn.Linear(32, n_targets * horizon)
 
     def forward(self, x):
         out, _ = self.lstm(x)
-        return self.fc(out[:, -1, :])
+        flat = self.fc(out[:, -1, :])
+        return flat.view(-1, self.horizon, self.n_targets)
 
 
 def _prepare_sequences(df: pd.DataFrame, history_length: int = 5, horizon: int = 2):
     X = []
     y = []
+    feature_cols = [c for c in df.columns if c not in {'unit_number', 'time_in_cycles'}]
+    # Use whichever sensor columns are actually present -- upstream feature
+    # building (cmapss_features.py) drops low-variance sensors, so the full
+    # 21-sensor list may not all exist in `df`.
+    sensor_cols = [c for c in SENSOR_COLS if c in feature_cols]
+    target_idx = [feature_cols.index(c) for c in sensor_cols]
     for unit in sorted(df['unit_number'].unique()):
-        unit_df = df[df['unit_number'] == unit].copy()
-        features = unit_df.drop(columns=['unit_number', 'time_in_cycles']).to_numpy(dtype=float)
+        unit_df = df[df['unit_number'] == unit].sort_values('time_in_cycles')
+        features = unit_df[feature_cols].to_numpy(dtype=float)
         for i in range(len(features) - history_length - horizon + 1):
             X.append(features[i:i + history_length])
-            y.append(features[i + history_length:i + history_length + horizon, 0])
-    return np.array(X, dtype=float), np.array(y, dtype=float)
+            # y shape per sample: (horizon, n_sensors) -- ALL present sensors,
+            # not just column 0 (which previously silently meant
+            # operational_setting_1, not a real sensor reading)
+            y.append(features[i + history_length:i + history_length + horizon][:, target_idx])
+    return np.array(X, dtype=float), np.array(y, dtype=float), feature_cols, sensor_cols
 
 
-def train(train_df: pd.DataFrame, output_dir: Path | None | str = None):
+def train(train_df: pd.DataFrame, output_dir: Path | None | str = None, history_length: int = 5, horizon: int = 2, seed: int = 42):
     output_dir = Path(output_dir) if output_dir is not None else ARTIFACTS_DIR / 'forecasting'
     output_dir.mkdir(parents=True, exist_ok=True)
-    X, y = _prepare_sequences(train_df)
+    # Reproducibility fix (same root cause found for lstm_rul.py this
+    # session: plain torch.manual_seed() alone was verified insufficient
+    # for LSTM determinism; use_deterministic_algorithms closes the gap).
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True)
+
+    X, y, feature_cols, sensor_cols = _prepare_sequences(train_df, history_length=history_length, horizon=horizon)
     X_tensor = torch.tensor(X, dtype=torch.float32)
     y_tensor = torch.tensor(y, dtype=torch.float32)
-    model = ForecastingLSTM(input_size=X.shape[2])
+    model = ForecastingLSTM(input_size=X.shape[2], n_targets=len(sensor_cols), horizon=horizon)
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    for _ in range(5):
+    loss_history = []
+    for _ in range(30):
         optimizer.zero_grad()
         pred = model(X_tensor)
         loss = criterion(pred, y_tensor)
         loss.backward()
         optimizer.step()
+        loss_history.append(float(loss.item()))
+
     torch.save(model.state_dict(), output_dir / 'forecasting_lstm.pt')
-    (output_dir / 'metrics.json').write_text(json.dumps({'samples': len(X)}), encoding='utf-8')
+    (output_dir / 'model_config.json').write_text(
+        json.dumps({
+            'input_size': X.shape[2], 'n_targets': len(sensor_cols), 'horizon': horizon,
+            'history_length': history_length, 'feature_cols': feature_cols, 'sensor_cols': sensor_cols,
+        }), encoding='utf-8')
+    (output_dir / 'metrics.json').write_text(
+        json.dumps({'samples': len(X), 'final_loss': loss_history[-1], 'first_loss': loss_history[0]}),
+        encoding='utf-8')
     return model
 
 

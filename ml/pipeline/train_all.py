@@ -1,7 +1,7 @@
 import json
 import sys
 from pathlib import Path
-
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 import pandas as pd
 
 from ml.config import ARTIFACTS_DIR, PROCESSED_DIR
@@ -22,9 +22,10 @@ from ml.models.regression import train as train_regression
 
 def run_pipeline():
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    ai4i_df = load_ai4i()
-    ai4i_df = clean_ai4i(ai4i_df)
-    ai4i_features, _ = build_ai4i_features(ai4i_df)
+    ai4i_raw = load_ai4i()
+    ai4i_df = clean_ai4i(ai4i_raw)
+    ai4i_features, failure_type, _ = build_ai4i_features(ai4i_df, ai4i_raw)
+    ai4i_features['failure_type'] = failure_type
     ai4i_features.to_csv(PROCESSED_DIR / 'ai4i_features.csv', index=False)
 
     train_df, test_df, rul_series = load_cmapss()
@@ -36,30 +37,31 @@ def run_pipeline():
     output_dir = ARTIFACTS_DIR / 'classification'
     output_dir.mkdir(parents=True, exist_ok=True)
     classification_model, multi_model, class_metrics = train_classification(ai4i_features, output_dir=output_dir)
-    save_confusion_matrix((ai4i_features['Machine failure'] > 0).astype(int), classification_model.predict(ai4i_features.drop(columns=['Machine failure', 'failure_type'])), output_dir)
+    save_confusion_matrix((ai4i_features['Machine_failure'] > 0).astype(int), classification_model.predict(ai4i_features.drop(columns=['Machine_failure', 'failure_type'])), output_dir)
 
     regression_dir = ARTIFACTS_DIR / 'regression'
     regression_dir.mkdir(parents=True, exist_ok=True)
     reg_model, reg_metrics = train_regression(train_features, test_features, output_dir=regression_dir)
-    save_regression_plot(test_features['rul'], reg_model.predict(test_features.drop(columns=['rul'])), regression_dir)
+    save_regression_plot(test_features['rul'], reg_model.predict(test_features.drop(columns=['rul', 'unit_number', 'time_in_cycles'])), regression_dir)
 
     lstm_model, lstm_metrics = train_lstm(train_features, test_features, output_dir=regression_dir)
 
     anomaly_dir = ARTIFACTS_DIR / 'anomaly'
     anomaly_dir.mkdir(parents=True, exist_ok=True)
     iforest_model, anomaly_metrics = train_iforest(ai4i_features, output_dir=anomaly_dir)
-    autoencoder_model, autoencoder_threshold = train_autoencoder(ai4i_features, output_dir=anomaly_dir)
-    save_anomaly_plot((iforest_model.decision_function(ai4i_features.drop(columns=['Machine failure', 'failure_type'])) * -1), (ai4i_features['Machine failure'] == 1).astype(int), anomaly_dir)
+    autoencoder_model, autoencoder_threshold, autoencoder_metrics = train_autoencoder(ai4i_features, output_dir=anomaly_dir)
+    save_anomaly_plot((iforest_model.decision_function(ai4i_features.drop(columns=['Machine_failure', 'failure_type'])) * -1), (ai4i_features['Machine_failure'] == 1).astype(int), anomaly_dir)
 
     forecasting_dir = ARTIFACTS_DIR / 'forecasting'
     forecasting_dir.mkdir(parents=True, exist_ok=True)
     forecasting_model = train_forecasting(train_features, output_dir=forecasting_dir)
+    forecasting_metrics = json.loads((forecasting_dir / 'metrics.json').read_text(encoding='utf-8'))
 
     meta = {
         'classification': class_metrics,
-        'regression': {**reg_metrics, **lstm_metrics},
-        'anomaly': anomaly_metrics,
-        'forecasting': {'samples': 1},
+        'regression': {'xgboost': reg_metrics, 'lstm': lstm_metrics},
+        'anomaly': {'isolation_forest': anomaly_metrics, 'autoencoder': autoencoder_metrics},
+        'forecasting': forecasting_metrics,
     }
     (ARTIFACTS_DIR / 'summary.json').write_text(json.dumps(meta), encoding='utf-8')
 

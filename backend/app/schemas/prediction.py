@@ -30,7 +30,7 @@ class RULResponse(BaseModel):
     recommended_maintenance_window_days: int
     model_used: str
     xgboost_prediction: float
-    lstm_prediction: float
+    lstm_prediction: float | None = None
 
 
 class AnomalyRequest(BaseModel):

@@ -17,10 +17,15 @@ SAMPLE_CMAPSS_TEST = SAMPLE_DIR / 'test_FD001.txt'
 SAMPLE_CMAPSS_RUL = SAMPLE_DIR / 'RUL_FD001.txt'
 SAMPLE_AI4I = SAMPLE_DIR / 'ai4i_sample.csv'
 
+# Verified via EDA (ml/notebooks/01_eda_cmapss.ipynb): these columns have
+# near-zero standard deviation (< 1e-6) in BOTH train and test splits of
+# CMAPSS FD001, meaning they carry no discriminative signal for RUL prediction.
 LOW_VARIANCE_SENSORS = [
+    'operational_setting_3',
     'sensor_measurement_1',
-    'sensor_measurement_2',
-    'sensor_measurement_3',
-    'sensor_measurement_4',
     'sensor_measurement_5',
+    'sensor_measurement_10',
+    'sensor_measurement_16',
+    'sensor_measurement_18',
+    'sensor_measurement_19',
 ]

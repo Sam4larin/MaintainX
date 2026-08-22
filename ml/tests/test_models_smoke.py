@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 from ml.data.clean_ai4i import clean_ai4i
 from ml.data.clean_cmapss import clean_cmapss
 from ml.data.load_ai4i import load_ai4i
@@ -13,8 +16,10 @@ from ml.models.regression import train as train_regression
 
 
 def test_models_train_and_predict_smoke():
-    ai4i = clean_ai4i(load_ai4i())
-    ai4i_features, _ = build_ai4i_features(ai4i)
+    ai4i_raw = load_ai4i()
+    ai4i = clean_ai4i(ai4i_raw)
+    ai4i_features, failure_type, _ = build_ai4i_features(ai4i, ai4i_raw)
+    ai4i_features['failure_type'] = failure_type
     train_classification(ai4i_features, output_dir='tmp')
     train_iforest(ai4i_features, output_dir='tmp')
     train_autoencoder(ai4i_features, output_dir='tmp')
