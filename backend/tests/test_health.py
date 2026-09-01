@@ -5,7 +5,9 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_health_endpoint():
+def test_health_endpoint(client):
     response = client.get('/health')
     assert response.status_code == 200
-    assert response.json() == {'status': 'ok'}
+    data = response.json()
+    assert data['status'] == 'ok'
+    assert data['models_loaded'] is True

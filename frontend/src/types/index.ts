@@ -53,3 +53,30 @@ export interface ForecastResponse {
   forecasted_cycles: number[];
   forecasted_sensor_values: Record<string, number[]>;
 }
+
+export interface ParsedAi4iRow {
+  Air_temperature_K: number;
+  Process_temperature_K: number;
+  Rotational_speed_rpm: number;
+  Torque_Nm: number;
+  Tool_wear_min: number;
+  Type: number;
+  temp_diff: number;
+  power: number;
+  source_row: number;
+}
+
+export interface UploadParseResponse {
+  detected_format: 'ai4i' | 'cmapss' | 'unknown';
+  row_count: number;
+  warnings: string[];
+  ai4i_rows: ParsedAi4iRow[];
+  sensor_history: Array<Record<string, number>>;
+  columns_found: string[];
+}
+
+export interface HealthResponse {
+  status: string;
+  models_loaded: boolean;
+  detail: string | null;
+}

@@ -1,5 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body { font-family: Arial, sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #faf9f6;
+  color: #1a222c;
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: rgba(189, 122, 53, 0.22);
+}
+
+/* Slim, quiet scrollbars that fit the industrial palette */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(77, 90, 104, 0.35);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(77, 90, 104, 0.55);
+}
+
+/* Visible keyboard focus ring across the app */
+:focus-visible {
+  outline: 2px solid #bd7a35;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

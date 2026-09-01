@@ -11,19 +11,39 @@ router = APIRouter()
 
 @router.post('/predict/failure-risk', response_model=FailureRiskResponse)
 def failure_risk(payload: FailureRiskRequest):
-    return predict_failure_risk(payload.model_dump())
+    try:
+        return predict_failure_risk(payload.model_dump())
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post('/predict/rul', response_model=RULResponse)
 def rul(payload: RULRequest):
-    return predict_rul(payload.model_dump())
+    try:
+        return predict_rul(payload.model_dump())
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post('/predict/anomaly', response_model=AnomalyResponse)
 def anomaly(payload: AnomalyRequest):
-    return predict_anomaly(payload.model_dump())
+    try:
+        return predict_anomaly(payload.model_dump())
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post('/predict/forecast', response_model=ForecastResponse)
 def forecast_endpoint(payload: ForecastRequest):
-    return forecast(payload.model_dump())
+    try:
+        return forecast(payload.model_dump())
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

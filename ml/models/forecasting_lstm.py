@@ -35,7 +35,7 @@ class ForecastingLSTM(nn.Module):
 def _prepare_sequences(df: pd.DataFrame, history_length: int = 5, horizon: int = 2):
     X = []
     y = []
-    feature_cols = [c for c in df.columns if c not in {'unit_number', 'time_in_cycles'}]
+    feature_cols = [c for c in df.columns if c not in {'unit_number', 'time_in_cycles', 'rul'}]
     # Use whichever sensor columns are actually present -- upstream feature
     # building (cmapss_features.py) drops low-variance sensors, so the full
     # 21-sensor list may not all exist in `df`.
@@ -93,3 +93,42 @@ def train(train_df: pd.DataFrame, output_dir: Path | None | str = None, history_
 def evaluate(model, X):
     with torch.no_grad():
         return model(X).numpy()
+
+
+def evaluate_metrics(model, X_test, y_test, sensor_cols):
+    model.eval()
+    if isinstance(X_test, np.ndarray):
+        X_tensor = torch.tensor(X_test, dtype=torch.float32)
+    else:
+        X_tensor = X_test
+
+    if isinstance(y_test, torch.Tensor):
+        y_test_np = y_test.numpy()
+    else:
+        y_test_np = np.array(y_test, dtype=float)
+
+    with torch.no_grad():
+        preds = model(X_tensor).numpy()
+
+    per_sensor = {}
+    rmse_list = []
+    mae_list = []
+
+    for i, s_col in enumerate(sensor_cols):
+        y_true_s = y_test_np[:, :, i].flatten()
+        y_pred_s = preds[:, :, i].flatten()
+        rmse = float(np.sqrt(np.mean((y_pred_s - y_true_s) ** 2)))
+        mae = float(np.mean(np.abs(y_pred_s - y_true_s)))
+        per_sensor[s_col] = {"rmse": rmse, "mae": mae}
+        rmse_list.append(rmse)
+        mae_list.append(mae)
+
+    overall = {
+        "rmse": float(np.mean(rmse_list)),
+        "mae": float(np.mean(mae_list)),
+    }
+
+    return {
+        "per_sensor": per_sensor,
+        "overall": overall,
+    }

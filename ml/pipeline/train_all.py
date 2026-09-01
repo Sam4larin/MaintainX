@@ -15,7 +15,7 @@ from ml.features.cmapss_features import build_cmapss_features
 from ml.models.anomaly_autoencoder import train as train_autoencoder
 from ml.models.anomaly_isolation_forest import train as train_iforest
 from ml.models.classification import train as train_classification
-from ml.models.forecasting_lstm import train as train_forecasting
+from ml.models.forecasting_lstm import train as train_forecasting, _prepare_sequences, evaluate_metrics
 from ml.models.lstm_rul import train as train_lstm
 from ml.models.regression import train as train_regression
 
@@ -55,7 +55,11 @@ def run_pipeline():
     forecasting_dir = ARTIFACTS_DIR / 'forecasting'
     forecasting_dir.mkdir(parents=True, exist_ok=True)
     forecasting_model = train_forecasting(train_features, output_dir=forecasting_dir)
+    X_test_forecast, y_test_forecast, _, forecast_sensor_cols = _prepare_sequences(test_features, history_length=5, horizon=2)
+    forecasting_eval = evaluate_metrics(forecasting_model, X_test_forecast, y_test_forecast, forecast_sensor_cols)
     forecasting_metrics = json.loads((forecasting_dir / 'metrics.json').read_text(encoding='utf-8'))
+    forecasting_metrics.update(forecasting_eval)
+    (forecasting_dir / 'metrics.json').write_text(json.dumps(forecasting_metrics, indent=2), encoding='utf-8')
 
     meta = {
         'classification': class_metrics,

@@ -6,3 +6,8 @@ httpx
 pandas
 numpy
 joblib
+scikit-learn
+xgboost
+torch
+python-multipart
+openpyxl

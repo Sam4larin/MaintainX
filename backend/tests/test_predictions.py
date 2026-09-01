@@ -5,7 +5,7 @@ from backend.app.main import app
 client = TestClient(app)
 
 
-def test_failure_risk_prediction_endpoint():
+def test_failure_risk_prediction_endpoint(client):
     payload = {
         'Air_temperature_K': 298.2,
         'Process_temperature_K': 308.7,
@@ -21,6 +21,6 @@ def test_failure_risk_prediction_endpoint():
     assert 'failure_probability' in response.json()
 
 
-def test_bad_payload_returns_422():
+def test_bad_payload_returns_422(client):
     response = client.post('/predict/failure-risk', json={'bad': 'payload'})
     assert response.status_code == 422

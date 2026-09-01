@@ -57,7 +57,10 @@ class ModelLoader:
 
     def ensure_loaded(self):
         if not self.artifacts:
-            self.load()
+            raise RuntimeError(
+                'ML artifacts are not loaded. Run `python -m ml.pipeline.train_all` to '
+                'generate them, then restart the API, or check ARTIFACTS_PATH in .env.'
+            )
 
 
 loader = ModelLoader()

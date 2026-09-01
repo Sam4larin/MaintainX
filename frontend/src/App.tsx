@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   getAsset,
   getAssets,
@@ -15,8 +15,13 @@ import type {
   AssetSummary,
   FailureRiskResponse,
   ForecastResponse,
+  ParsedAi4iRow,
   RulResponse,
 } from './types';
+import { Sidebar, type AnalyticsTab, type ViewId } from './components/Sidebar';
+import { Overview } from './pages/Overview';
+import { Analytics } from './pages/Analytics';
+import { riskTone } from './lib/risk';
 
 const ai4iSample: Ai4iPayload = {
   Air_temperature_K: 298.1,
@@ -48,45 +53,16 @@ const cmapssSample = cmapssSampleRows.map((row) => {
   return reading;
 });
 
-function ResultBlock({ value }: { value: unknown }) {
-  if (!value) return null;
-  return <pre className="mt-3 max-h-72 overflow-auto rounded border bg-slate-950 p-3 text-xs text-slate-50">{JSON.stringify(value, null, 2)}</pre>;
-}
-
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  return (
-    <label className="grid gap-1 text-sm">
-      <span className="font-medium text-slate-700">{label}</span>
-      <input className="rounded border border-slate-300 px-3 py-2" type="number" step="any" value={value} onChange={(event) => onChange(Number(event.target.value))} />
-    </label>
-  );
-}
-
-function Panel({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
-      {children}
-    </section>
-  );
-}
+const viewTitles: Record<ViewId, string> = {
+  overview: 'Fleet overview',
+  analytics: 'Predictive analytics',
+};
 
 export default function App() {
+  const [activeView, setActiveView] = useState<ViewId>('overview');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('failure-risk');
   const [health, setHealth] = useState<string>('checking');
+  const [healthDetail, setHealthDetail] = useState<string | null>(null);
   const [assets, setAssets] = useState<AssetSummary[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetDetail | null>(null);
   const [ai4i, setAi4i] = useState<Ai4iPayload>(ai4iSample);
@@ -99,8 +75,18 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getHealth().then((data) => setHealth(data.status)).catch((err) => setHealth(`error: ${err.message}`));
-    getAssets().then(setAssets).catch(() => setAssets([]));
+    getHealth()
+      .then((data) => {
+        setHealth(data.status);
+        setHealthDetail(data.detail);
+      })
+      .catch((err) => {
+        setHealth('unreachable');
+        setHealthDetail(err instanceof Error ? err.message : null);
+      });
+    getAssets()
+      .then(setAssets)
+      .catch(() => setAssets([]));
   }, []);
 
   async function submit<T>(name: string, action: () => Promise<T>, setter: (value: T) => void) {
@@ -124,6 +110,19 @@ export default function App() {
     });
   }
 
+  function loadAi4iRow(row: ParsedAi4iRow) {
+    setAi4i({
+      Air_temperature_K: row.Air_temperature_K,
+      Process_temperature_K: row.Process_temperature_K,
+      Rotational_speed_rpm: row.Rotational_speed_rpm,
+      Torque_Nm: row.Torque_Nm,
+      Tool_wear_min: row.Tool_wear_min,
+      Type: row.Type,
+      temp_diff: row.temp_diff,
+      power: row.power,
+    });
+  }
+
   function runFailure(event: FormEvent) {
     event.preventDefault();
     void submit('failure-risk', () => predictFailureRisk(ai4i), setFailureResult);
@@ -144,77 +143,98 @@ export default function App() {
     void submit('forecast', () => predictForecast({ sensor_history: JSON.parse(historyText) }), setForecastResult);
   }
 
+  function selectAssetHandler(assetId: string) {
+    setLoading('asset-fetch');
+    getAsset(assetId)
+      .then(setSelectedAsset)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(null));
+  }
+
+  const alertCount = useMemo(
+    () => assets.filter((a) => ['critical', 'high'].includes(riskTone(a.risk_level))).length,
+    [assets],
+  );
+
   return (
-    <main className="min-h-screen bg-slate-50 p-4 text-slate-900 md:p-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <header className="flex flex-col gap-3 border-b border-slate-200 pb-5 md:flex-row md:items-end md:justify-between">
+    <div className="flex min-h-screen flex-col bg-paper-50 font-sans text-ink-800 md:flex-row">
+      <Sidebar
+        activeView={activeView}
+        setActiveView={setActiveView}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        health={health}
+        healthDetail={healthDetail}
+        fleetCount={assets.length}
+        alertCount={alertCount}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-paper-300/70 bg-white/90 px-6 py-4 backdrop-blur">
           <div>
-            <h1 className="text-3xl font-semibold">MaintainX Demo Console</h1>
-            <p className="mt-1 text-slate-600">Real FastAPI predictions from the trained local model artifacts.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">Predictive maintenance</p>
+            <h1 className="font-display text-lg font-semibold tracking-tight text-ink-800">{viewTitles[activeView]}</h1>
           </div>
-          <div className="rounded border border-slate-300 bg-white px-3 py-2 text-sm">API health: <strong>{health}</strong></div>
+          <div className="hidden items-center gap-2 sm:flex">
+            {alertCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e6c9c1] bg-[#f8ece9] px-3 py-1 text-xs font-semibold text-signal-red">
+                <span className="h-1.5 w-1.5 rounded-full bg-signal-red" />
+                {alertCount} asset{alertCount === 1 ? '' : 's'} need attention
+              </span>
+            )}
+            <span className="rounded-full border border-paper-300 bg-paper-100 px-3 py-1 text-xs font-medium text-ink-500">
+              Production ML environment
+            </span>
+          </div>
         </header>
 
-        {error && <div className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
-
-        <Panel title="Assets">
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {assets.map((asset) => (
-              <button
-                className="rounded border border-slate-200 p-3 text-left hover:border-slate-500"
-                key={asset.id}
-                onClick={() => getAsset(asset.id).then(setSelectedAsset).catch((err) => setError(err.message))}
-              >
-                <div className="font-semibold">{asset.name}</div>
-                <div className="text-sm text-slate-600">{asset.type} · {asset.risk_level} · {asset.maintenance_days} days</div>
+        <main className="mx-auto w-full max-w-7xl flex-1 space-y-6 p-6">
+          {error && (
+            <div className="flex items-center justify-between rounded-xl border border-[#e6c9c1] bg-[#f8ece9] p-4 text-sm text-signal-crimson shadow-panel">
+              <div className="flex items-center gap-2">
+                <svg className="h-5 w-5 shrink-0 text-signal-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{error}</span>
+              </div>
+              <button type="button" onClick={() => setError(null)} className="text-xs font-semibold text-signal-red hover:text-signal-crimson">
+                Dismiss
               </button>
-            ))}
-          </div>
-          <ResultBlock value={selectedAsset} />
-        </Panel>
+            </div>
+          )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Panel title="Failure Risk">
-            <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={runFailure}>
-              {Object.entries(ai4i).map(([key, value]) => (
-                <NumberField key={key} label={key} value={value} onChange={(next) => updateAi4i(key as keyof Ai4iPayload, next)} />
-              ))}
-              <div className="flex gap-2 md:col-span-2">
-                <button className="rounded bg-slate-900 px-4 py-2 text-white" disabled={loading === 'failure-risk'}>{loading === 'failure-risk' ? 'Running...' : 'Predict failure risk'}</button>
-                <button className="rounded border px-4 py-2" type="button" onClick={() => setAi4i(ai4iSample)}>Load AI4I sample</button>
-              </div>
-            </form>
-            <ResultBlock value={failureResult} />
-          </Panel>
+          {activeView === 'overview' && (
+            <Overview
+              assets={assets}
+              selectedAsset={selectedAsset}
+              onSelectAsset={selectAssetHandler}
+              assetLoading={loading === 'asset-fetch'}
+            />
+          )}
 
-          <Panel title="Anomaly Detection">
-            <form className="mt-4 space-y-3" onSubmit={runAnomaly}>
-              <p className="text-sm text-slate-600">Uses the same editable AI4I payload as the failure-risk panel.</p>
-              <button className="rounded bg-slate-900 px-4 py-2 text-white" disabled={loading === 'anomaly'}>{loading === 'anomaly' ? 'Running...' : 'Predict anomaly'}</button>
-            </form>
-            <ResultBlock value={anomalyResult} />
-          </Panel>
-
-          <Panel title="Remaining Useful Life">
-            <form className="mt-4 space-y-3" onSubmit={runRul}>
-              <textarea className="h-72 w-full rounded border border-slate-300 p-3 font-mono text-xs" value={historyText} onChange={(event) => setHistoryText(event.target.value)} />
-              <div className="flex gap-2">
-                <button className="rounded bg-slate-900 px-4 py-2 text-white" disabled={loading === 'rul'}>{loading === 'rul' ? 'Running...' : 'Predict RUL'}</button>
-                <button className="rounded border px-4 py-2" type="button" onClick={() => setHistoryText(JSON.stringify(cmapssSample, null, 2))}>Load C-MAPSS sample</button>
-              </div>
-            </form>
-            <ResultBlock value={rulResult} />
-          </Panel>
-
-          <Panel title="Sensor Forecast">
-            <form className="mt-4 space-y-3" onSubmit={runForecast}>
-              <p className="text-sm text-slate-600">Uses the editable C-MAPSS sensor history JSON from the RUL panel.</p>
-              <button className="rounded bg-slate-900 px-4 py-2 text-white" disabled={loading === 'forecast'}>{loading === 'forecast' ? 'Running...' : 'Predict forecast'}</button>
-            </form>
-            <ResultBlock value={forecastResult} />
-          </Panel>
-        </div>
+          {activeView === 'analytics' && (
+            <Analytics
+              activeTab={activeTab}
+              ai4i={ai4i}
+              updateAi4i={updateAi4i}
+              loadAi4iSample={() => setAi4i(ai4iSample)}
+              loadAi4iRow={loadAi4iRow}
+              historyText={historyText}
+              setHistoryText={setHistoryText}
+              loadHistorySample={() => setHistoryText(JSON.stringify(cmapssSample, null, 2))}
+              loading={loading}
+              failureResult={failureResult}
+              anomalyResult={anomalyResult}
+              rulResult={rulResult}
+              forecastResult={forecastResult}
+              runFailure={runFailure}
+              runAnomaly={runAnomaly}
+              runRul={runRul}
+              runForecast={runForecast}
+            />
+          )}
+        </main>
       </div>
-    </main>
+    </div>
   );
 }
