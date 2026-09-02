@@ -46,10 +46,10 @@ You don't need to use the demo datasets. Every analytics tab has an upload box t
 └─────────────┘                      └──────────────┘                 └──────────────────┘
 ```
 
-- **`ml/`** — training pipeline (feature engineering, model training, evaluation) for all four tasks, and the resulting trained artifacts (`.joblib` for XGBoost/scikit-learn, `.pt` for PyTorch state dicts).
-- **`backend/`** — FastAPI service that loads those artifacts once at startup and exposes them as `/predict/*` endpoints, plus `/assets` for fleet data and `/upload/parse` for user-supplied files.
-- **`frontend/`** — React + TypeScript + Tailwind dashboard: an Overview page for fleet-wide health, and an Analytics page with one tab per ML capability.
-- **`data/`** — raw and processed versions of the two source datasets, used to reproduce training.
+- **`ml/`**: training pipeline (feature engineering, model training, evaluation) for all four tasks, and the resulting trained artifacts (`.joblib` for XGBoost/scikit-learn, `.pt` for PyTorch state dicts).
+- **`backend/`**: FastAPI service that loads those artifacts once at startup and exposes them as `/predict/*` endpoints, plus `/assets` for fleet data and `/upload/parse` for user-supplied files.
+- **`frontend/`**: React + TypeScript + Tailwind dashboard: an Overview page for fleet-wide health, and an Analytics page with one tab per ML capability.
+- **`data/`**: raw and processed versions of the two source datasets, used to reproduce training.
 
 **Why this stack:** XGBoost for the tabular/structured tasks (classification, regression) because gradient-boosted trees are the standard for tabular data and are fast enough to serve in real time; LSTMs for the sequence tasks (RUL, forecasting) because they capture degradation trends over time that a tree model would miss; FastAPI for a typed, self-documenting API (`/docs` is auto-generated); React/Tailwind for a dashboard that reads as a real product rather than a notebook.
 
