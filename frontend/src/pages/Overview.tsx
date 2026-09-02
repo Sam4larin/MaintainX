@@ -66,7 +66,7 @@ export function Overview({ assets, selectedAsset, onSelectAsset, assetLoading }:
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
         <h2 className="font-display text-2xl font-semibold tracking-tight text-ink-800">Fleet overview</h2>
-        <p className="text-sm text-ink-500">A plain-language snapshot of every monitored asset — open Analytics for model-level detail.</p>
+        <p className="text-sm text-ink-500">A plain-language snapshot of every monitored asset. Open Analytics for model-level detail.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[auto_1fr]">

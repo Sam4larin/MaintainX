@@ -7,6 +7,7 @@ WORKDIR /app
 # Copy dependency list first so Docker can cache installs when code changes
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
 # Copy the backend code and the trained artifacts into the image
 COPY backend /app/backend
