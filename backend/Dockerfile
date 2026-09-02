@@ -3,23 +3,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy dependency list first so Docker can cache installs when code changes
-COPY backend/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.txt ./backend-requirements.txt
+COPY ml/requirements.txt ./ml-requirements.txt
+RUN python -c "lines = open('ml-requirements.txt').read().splitlines(); filtered = [l for l in lines if l.strip() not in ('torch', 'pytest')]; open('ml-requirements-runtime.txt', 'w').write(chr(10).join(filtered) + chr(10))"
+RUN pip install --no-cache-dir -r backend-requirements.txt -r ml-requirements-runtime.txt
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 
-# Copy backend code, ml source (model classes are imported at runtime), and
-# the real raw datasets used to train inside the image -- ml/artifacts/ is
-# correctly gitignored (it's generated output, not source), so it does not
-# exist on a fresh clone/build context. It must be generated here, not
-# copied from a path that only exists after someone has run the pipeline
-# locally. The real datasets (not the smaller CI sample) are used here.
 COPY backend /app/backend
 COPY ml /app/ml
 COPY data/raw /app/data/raw
 
-# Train inside the image using the real datasets, producing real,
-# full-accuracy artifacts baked into this image.
 RUN python -m ml.pipeline.train_all
 
 EXPOSE 8000
