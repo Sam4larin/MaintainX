@@ -18,10 +18,10 @@ def build_ai4i_features(df: pd.DataFrame, raw_df: pd.DataFrame) -> tuple[pd.Data
     data['temp_diff'] = data['Process_temperature'] - data['Air_temperature']
     data['power'] = data['Torque'] * data['Rotational_speed']
 
-    # failure_type is derived from RAW flags, kept as a SEPARATE output —
+    # failure_type is derived from RAW flags, kept as a SEPARATE output
     # for dashboard/reporting ("why did this machine fail?"), never fed
     # into the model as a feature (the flags are target leakage, per
-    # clean_ai4i.py — see EDA notebook for the verification).
+    # clean_ai4i.py; see EDA notebook for the verification).
     flag_cols = ['TWF', 'HDF', 'PWF', 'OSF', 'RNF']
     failure_type = raw_df[flag_cols].idxmax(axis=1)
     failure_type = failure_type.where(raw_df[flag_cols].sum(axis=1) == 1, other='Unspecified')
@@ -31,5 +31,7 @@ def build_ai4i_features(df: pd.DataFrame, raw_df: pd.DataFrame) -> tuple[pd.Data
     scaler = StandardScaler()
     scaled = data.copy()
     scaled[feature_cols] = scaler.fit_transform(data[feature_cols])
-    joblib.dump(scaler, ARTIFACTS_DIR / 'classification' / 'ai4i_scaler.joblib')
+    output_dir = ARTIFACTS_DIR / 'classification'
+    output_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(scaler, output_dir / 'ai4i_scaler.joblib')
     return scaled, failure_type, {'feature_cols': feature_cols}

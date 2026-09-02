@@ -12,14 +12,6 @@ def build_cmapss_features(train_df: pd.DataFrame, test_df: pd.DataFrame, rul_ser
     test = test_df.copy()
     max_cycle_per_unit = train.groupby('unit_number')['time_in_cycles'].transform('max')
     train['rul'] = max_cycle_per_unit - train['time_in_cycles']
-
-    # RUL_FD001.txt gives the true RUL only at each test engine's LAST observed
-    # cycle (test engines are truncated mid-life, not run to failure). Earlier
-    # cycles of the same engine have MORE cycles remaining, not the same amount.
-    # BUG (fixed): previously assigned this single final-cycle value to every
-    # row of the engine, producing a flat (non-decreasing) target across an
-    # engine's life. That mismatched the correctly-decreasing train target and
-    # was the root cause of negative R2 on the official test set.
     max_cycle_test_per_unit = test.groupby('unit_number')['time_in_cycles'].transform('max')
     unit_to_final_rul = dict(zip(sorted(test['unit_number'].unique()), rul_series.to_numpy()))
     final_rul_per_row = test['unit_number'].map(unit_to_final_rul)
@@ -53,5 +45,7 @@ def build_cmapss_features(train_df: pd.DataFrame, test_df: pd.DataFrame, rul_ser
     train_scaled[feature_cols] = scaler.fit_transform(train[feature_cols])
     test_scaled = test.copy()
     test_scaled[feature_cols] = scaler.transform(test[feature_cols])
-    joblib.dump(scaler, ARTIFACTS_DIR / 'regression' / 'cmapss_scaler.joblib')
+    regression_dir = ARTIFACTS_DIR / 'regression'
+    regression_dir.mkdir(parents=True, exist_ok=True)
+    joblib.dump(scaler, regression_dir / 'cmapss_scaler.joblib')
     return train_scaled, test_scaled, {'feature_cols': feature_cols}
