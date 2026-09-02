@@ -27,4 +27,4 @@ jobs:
         run: python -m ml.pipeline.train_all
 
       - name: Run tests
-        run: pytest ml/tests backend/tests
+        run: python -m pytest ml/tests backend/tests
