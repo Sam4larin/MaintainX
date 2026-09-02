@@ -1,1 +1,1 @@
-"""Data loading and cleaning utilities for MaintainX."""
+"""Data loading and cleaning utilities for Maintora."""

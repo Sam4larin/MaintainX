@@ -95,7 +95,7 @@ export function Sidebar({
           <GaugeMark />
         </div>
         <div>
-          <h1 className="font-display text-[15px] font-semibold leading-tight tracking-tight text-white">MaintainX</h1>
+          <h1 className="font-display text-[15px] font-semibold leading-tight tracking-tight text-white">Maintora</h1>
           <p className="text-[11px] font-medium text-ink-500">Condition monitoring</p>
         </div>
       </div>

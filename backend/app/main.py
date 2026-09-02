@@ -11,7 +11,7 @@ from backend.app.routers.predictions import router as predictions_router
 from backend.app.routers.upload import router as upload_router
 from backend.app.services.model_loader import loader
 
-logger = logging.getLogger('maintainx')
+logger = logging.getLogger('Maintora')
 
 
 @asynccontextmanager
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title='MaintainX API', lifespan=lifespan)
+app = FastAPI(title='Maintora API', lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.frontend_origins,
@@ -54,7 +54,7 @@ app.include_router(upload_router)
 @app.get('/')
 def root():
     return {
-        'service': 'MaintainX API',
+        'service': 'Maintora API',
         'docs': '/docs',
         'health': '/health',
     }

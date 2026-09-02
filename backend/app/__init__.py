@@ -1,1 +1,1 @@
-"""Backend application package for MaintainX."""
+"""Backend application package for Maintora."""

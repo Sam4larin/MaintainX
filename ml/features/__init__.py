@@ -1,1 +1,1 @@
-"""Feature engineering helpers for MaintainX."""
+"""Feature engineering helpers for Maintora."""

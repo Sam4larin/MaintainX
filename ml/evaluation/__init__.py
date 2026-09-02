@@ -1,1 +1,1 @@
-"""Evaluation utilities for MaintainX models."""
+"""Evaluation utilities for Maintora models."""
