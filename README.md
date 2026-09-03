@@ -1,10 +1,14 @@
 # Maintora: Predictive Maintenance Intelligence Platform
 
-Maintora turns raw equipment sensor data into a plain-language answer facility teams actually need:
+Maintora watches your machine sensors and flags issues before they fail:
 
 > **Pump #3 Failure Risk: 87%, Recommended Maintenance within 7 days**
 
-instead of waiting for something to break.
+👉 **[Live Demo](https://maintora-olive.vercel.app/)**
+
+| Fleet Overview | ML Analytics |
+| :---: | :---: |
+| <img src="https://github.com/user-attachments/assets/48a72b3c-720c-443a-be22-98401827f01f" alt="Maintora Overview" width="100%" /> | <img src="https://github.com/user-attachments/assets/ad662304-c98d-4ed9-b130-9c11988fdceb" alt="Maintora Analytics" width="100%" /> |
 
 ---
 
@@ -94,4 +98,4 @@ docs/        architecture notes, model cards, design decisions
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT - see [LICENSE](./LICENSE).
