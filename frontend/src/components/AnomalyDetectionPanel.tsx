@@ -1,38 +1,39 @@
 import React from 'react';
-import type { AnomalyResponse, ParsedAi4iRow, UploadParseResponse } from '../types';
+import type { AnomalyResponse, ParsedAi4iRow } from '../types';
 import { Panel } from './ui/Panel';
 import { PrimaryButton, RawJson } from './ui/Fields';
-import { FileUpload } from './FileUpload';
 
 interface Props {
   onSubmit: (e: React.FormEvent) => void;
   onLoadRow: (row: ParsedAi4iRow) => void;
   loading: boolean;
   result: AnomalyResponse | null;
+  uploadedFileName: string | null;
+  uploadedRows: ParsedAi4iRow[];
 }
 
-export function AnomalyDetectionPanel({ onSubmit, onLoadRow, loading, result }: Props) {
+export function AnomalyDetectionPanel({ loading, result, onSubmit, uploadedFileName, uploadedRows }: Props) {
   const errorPercent = result
     ? Math.min(100, Math.round((result.autoencoder_reconstruction_error / result.anomaly_threshold) * 100))
     : 0;
 
-  function handleParsed(parsed: UploadParseResponse) {
-    if (parsed.ai4i_rows.length > 0) onLoadRow(parsed.ai4i_rows[0]);
-  }
-
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.1fr]">
       <div className="space-y-6">
-        <Panel title="Upload your own data" eyebrow="Optional · CSV or Excel">
-          <FileUpload expects="ai4i" onParsed={handleParsed} />
-        </Panel>
+        {uploadedRows.length > 0 && (
+          <Panel title="Using uploaded data" eyebrow={uploadedFileName ?? 'From sidebar upload'}>
+            <p className="text-xs text-ink-500">
+              Scoring against the telemetry loaded from your uploaded file (same reading used on the Failure Risk tab).
+            </p>
+          </Panel>
+        )}
 
         <Panel title="Anomaly detection" eyebrow="Autoencoder + Isolation Forest">
           <form onSubmit={onSubmit} className="space-y-4">
             <p className="rounded-md border border-paper-200 bg-paper-50 p-3 text-xs leading-relaxed text-ink-600">
               Evaluates the currently loaded telemetry payload against unsupervised reconstruction-error thresholds and
-              an isolation-forest density boundary. Update values on the Failure Risk tab or upload a file above, then
-              run this check on the same reading.
+              an isolation-forest density boundary. Update values on the Failure Risk tab or upload a file in the
+              sidebar, then run this check on the same reading.
             </p>
             <PrimaryButton type="submit" loading={loading} loadingText="Auditing telemetry…">
               Run anomaly check

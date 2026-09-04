@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { ForecastResponse, UploadParseResponse } from '../types';
+import type { ForecastResponse } from '../types';
 import { Panel } from './ui/Panel';
 import { PrimaryButton, RawJson } from './ui/Fields';
-import { FileUpload } from './FileUpload';
 
 interface Props {
   onSubmit: (e: React.FormEvent) => void;
   onLoadHistory: (historyJson: string) => void;
   loading: boolean;
   result: ForecastResponse | null;
+  uploadedFileName: string | null;
 }
 
-export function SensorForecastPanel({ onSubmit, onLoadHistory, loading, result }: Props) {
+export function SensorForecastPanel({ onSubmit, loading, result, uploadedFileName }: Props) {
   const [selectedSensor, setSelectedSensor] = useState<string>('');
 
   const sensorKeys = result ? Object.keys(result.forecasted_sensor_values) : [];
@@ -26,24 +26,23 @@ export function SensorForecastPanel({ onSubmit, onLoadHistory, loading, result }
         }))
       : [];
 
-  function handleParsed(parsed: UploadParseResponse) {
-    if (parsed.sensor_history.length > 0) {
-      onLoadHistory(JSON.stringify(parsed.sensor_history, null, 2));
-    }
-  }
-
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.3fr]">
       <div className="space-y-6">
-        <Panel title="Upload your own data" eyebrow="Optional · CSV, Excel, or raw C-MAPSS .txt">
-          <FileUpload expects="cmapss" onParsed={handleParsed} />
-        </Panel>
+        {uploadedFileName && (
+          <Panel title="Using uploaded data" eyebrow={uploadedFileName}>
+            <p className="text-xs text-ink-500">
+              Forecasting from the sensor history loaded from your uploaded file (same history used on the RUL tab).
+            </p>
+          </Panel>
+        )}
 
         <Panel title="Sensor forecast" eyebrow="Turbofan trajectory projection">
           <form onSubmit={onSubmit} className="space-y-4">
             <p className="rounded-md border border-paper-200 bg-paper-50 p-3 text-xs leading-relaxed text-ink-600">
-              Uses the same sensor history loaded on the RUL tab (or uploaded above) to project future cycle values
-              across every sensor channel, so you can see where a reading is trending before it crosses a threshold.
+              Uses the same sensor history loaded on the RUL tab (or uploaded in the sidebar) to project future cycle
+              values across every sensor channel, so you can see where a reading is trending before it crosses a
+              threshold.
             </p>
             <PrimaryButton type="submit" loading={loading} loadingText="Projecting trajectory…">
               Run forecast

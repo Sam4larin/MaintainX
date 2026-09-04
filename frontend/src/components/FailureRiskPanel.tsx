@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { Ai4iPayload, FailureRiskResponse, ParsedAi4iRow, UploadParseResponse } from '../types';
+import type { Ai4iPayload, FailureRiskResponse, ParsedAi4iRow } from '../types';
 import { Panel } from './ui/Panel';
 import { Gauge } from './ui/Gauge';
 import { GhostButton, NumberField, PrimaryButton, RawJson } from './ui/Fields';
 import { riskStyle, riskDisplayLabel } from '../lib/risk';
-import { FileUpload } from './FileUpload';
 
 interface Props {
   ai4i: Ai4iPayload;
@@ -15,18 +14,28 @@ interface Props {
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
   result: FailureRiskResponse | null;
+  uploadedFileName: string | null;
+  uploadedRows: ParsedAi4iRow[];
 }
 
-export function FailureRiskPanel({ ai4i, onUpdateAi4i, onLoadSample, onLoadRow, onSubmit, loading, result }: Props) {
-  const [uploadedRows, setUploadedRows] = useState<ParsedAi4iRow[]>([]);
+export function FailureRiskPanel({
+  ai4i,
+  onUpdateAi4i,
+  onLoadSample,
+  onLoadRow,
+  onSubmit,
+  loading,
+  result,
+  uploadedFileName,
+  uploadedRows,
+}: Props) {
   const [selectedRow, setSelectedRow] = useState(0);
 
-  function handleParsed(parsed: UploadParseResponse) {
-    if (parsed.ai4i_rows.length === 0) return;
-    setUploadedRows(parsed.ai4i_rows);
+  // Reset the row selector whenever a new file is uploaded, so it doesn't
+  // silently keep pointing at an index from a previous file.
+  useEffect(() => {
     setSelectedRow(0);
-    onLoadRow(parsed.ai4i_rows[0]);
-  }
+  }, [uploadedFileName]);
 
   function selectRow(index: number) {
     setSelectedRow(index);
@@ -44,27 +53,30 @@ export function FailureRiskPanel({ ai4i, onUpdateAi4i, onLoadSample, onLoadRow, 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.1fr]">
       <div className="space-y-6">
-        <Panel title="Upload your own data" eyebrow="Optional · CSV or Excel">
-          <FileUpload expects="ai4i" onParsed={handleParsed} />
-          {uploadedRows.length > 1 && (
-            <div className="mt-3">
-              <label className="mb-1 block text-[11px] font-medium text-ink-500">
-                Row to score ({uploadedRows.length} rows available)
-              </label>
-              <select
-                className="w-full rounded-md border border-paper-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-700 focus:border-rust-500 focus:outline-none"
-                value={selectedRow}
-                onChange={(e) => selectRow(Number(e.target.value))}
-              >
-                {uploadedRows.map((row, i) => (
-                  <option key={i} value={i}>
-                    Row {row.source_row} — {row.Air_temperature_K}K / {row.Torque_Nm}Nm / {row.Rotational_speed_rpm}rpm
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </Panel>
+        {uploadedRows.length > 0 && (
+          <Panel title="Using uploaded data" eyebrow={uploadedFileName ?? 'From sidebar upload'}>
+            {uploadedRows.length > 1 ? (
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-ink-500">
+                  Row to score ({uploadedRows.length} rows available)
+                </label>
+                <select
+                  className="w-full rounded-md border border-paper-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-700 focus:border-rust-500 focus:outline-none"
+                  value={selectedRow}
+                  onChange={(e) => selectRow(Number(e.target.value))}
+                >
+                  {uploadedRows.map((row, i) => (
+                    <option key={i} value={i}>
+                      Row {row.source_row} — {row.Air_temperature_K}K / {row.Torque_Nm}Nm / {row.Rotational_speed_rpm}rpm
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p className="text-xs text-ink-500">1 row loaded from your uploaded file — values below are pre-filled from it.</p>
+            )}
+          </Panel>
+        )}
 
         <Panel
           title="Failure risk model"

@@ -3,14 +3,17 @@ import type { UploadParseResponse } from '../types';
 import { uploadEquipmentFile } from '../api/client';
 
 interface FileUploadProps {
-  /** Which shape this tab expects, so we can warn on a mismatch. */
-  expects: 'ai4i' | 'cmapss';
-  onParsed: (result: UploadParseResponse) => void;
+  /** Which shape this tab expects, so we can warn on a mismatch.
+   * 'either' is used by the single shared sidebar upload, which accepts
+   * both formats and lets the caller route the result appropriately. */
+  expects: 'ai4i' | 'cmapss' | 'either';
+  onParsed: (result: UploadParseResponse, fileName: string) => void;
 }
 
 const formatLabel: Record<string, string> = {
   ai4i: 'Machine process data (AI4I-style)',
   cmapss: 'Sensor time-series (C-MAPSS-style)',
+  either: 'Machine process or sensor time-series data',
   unknown: 'Unrecognized format',
 };
 
@@ -31,7 +34,7 @@ export function FileUpload({ expects, onParsed }: FileUploadProps) {
       const parsed = await uploadEquipmentFile(file);
       setResult(parsed);
       if (parsed.detected_format !== 'unknown') {
-        onParsed(parsed);
+        onParsed(parsed, file.name);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not parse this file.');
@@ -47,7 +50,8 @@ export function FileUpload({ expects, onParsed }: FileUploadProps) {
     if (file) void handleFile(file);
   }
 
-  const mismatch = result && result.detected_format !== 'unknown' && result.detected_format !== expects;
+  const mismatch =
+    expects !== 'either' && result && result.detected_format !== 'unknown' && result.detected_format !== expects;
 
   return (
     <div className="space-y-3">

@@ -31,6 +31,8 @@ interface AnalyticsProps {
   runAnomaly: (e: FormEvent) => void;
   runRul: (e: FormEvent) => void;
   runForecast: (e: FormEvent) => void;
+  uploadedFileName: string | null;
+  uploadedAi4iRows: ParsedAi4iRow[];
 }
 
 const tabMeta: Record<AnalyticsTab, { title: string; description: string }> = {
@@ -71,6 +73,8 @@ export function Analytics(props: AnalyticsProps) {
           onSubmit={props.runFailure}
           loading={props.loading === 'failure-risk'}
           result={props.failureResult}
+          uploadedFileName={props.uploadedFileName}
+          uploadedRows={props.uploadedAi4iRows}
         />
       )}
 
@@ -80,6 +84,8 @@ export function Analytics(props: AnalyticsProps) {
           onLoadRow={props.loadAi4iRow}
           loading={props.loading === 'anomaly'}
           result={props.anomalyResult}
+          uploadedFileName={props.uploadedFileName}
+          uploadedRows={props.uploadedAi4iRows}
         />
       )}
 
@@ -91,6 +97,7 @@ export function Analytics(props: AnalyticsProps) {
           onSubmit={props.runRul}
           loading={props.loading === 'rul'}
           result={props.rulResult}
+          uploadedFileName={props.uploadedFileName}
         />
       )}
 
@@ -100,6 +107,7 @@ export function Analytics(props: AnalyticsProps) {
           onLoadHistory={props.setHistoryText}
           loading={props.loading === 'forecast'}
           result={props.forecastResult}
+          uploadedFileName={props.uploadedFileName}
         />
       )}
     </div>

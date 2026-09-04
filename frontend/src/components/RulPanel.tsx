@@ -1,9 +1,8 @@
 import React from 'react';
-import type { RulResponse, UploadParseResponse } from '../types';
+import type { RulResponse } from '../types';
 import { Panel } from './ui/Panel';
 import { Gauge } from './ui/Gauge';
 import { GhostButton, PrimaryButton, RawJson } from './ui/Fields';
-import { FileUpload } from './FileUpload';
 
 interface Props {
   historyText: string;
@@ -12,9 +11,10 @@ interface Props {
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
   result: RulResponse | null;
+  uploadedFileName: string | null;
 }
 
-export function RulPanel({ historyText, setHistoryText, onLoadSample, onSubmit, loading, result }: Props) {
+export function RulPanel({ historyText, setHistoryText, onLoadSample, onSubmit, loading, result, uploadedFileName }: Props) {
   const rulTone = result
     ? result.recommended_maintenance_window_days <= 7
       ? { text: 'text-signal-red', bg: 'bg-[#f8ece9]', border: 'border-[#e6c9c1]', gauge: '#b1493f' }
@@ -25,18 +25,16 @@ export function RulPanel({ historyText, setHistoryText, onLoadSample, onSubmit, 
 
   const gaugeFraction = result ? Math.max(0, Math.min(1, result.predicted_rul_days / 120)) : 0;
 
-  function handleParsed(parsed: UploadParseResponse) {
-    if (parsed.sensor_history.length > 0) {
-      setHistoryText(JSON.stringify(parsed.sensor_history, null, 2));
-    }
-  }
-
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.1fr]">
       <div className="space-y-6">
-        <Panel title="Upload your own data" eyebrow="Optional · CSV, Excel, or raw C-MAPSS .txt">
-          <FileUpload expects="cmapss" onParsed={handleParsed} />
-        </Panel>
+        {uploadedFileName && (
+          <Panel title="Using uploaded data" eyebrow={uploadedFileName}>
+            <p className="text-xs text-ink-500">
+              The sensor history below was loaded from your uploaded file — edit it directly if needed.
+            </p>
+          </Panel>
+        )}
 
         <Panel
           title="Remaining useful life"

@@ -73,6 +73,8 @@ export default function App() {
   const [forecastResult, setForecastResult] = useState<ForecastResponse | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadedAi4iRows, setUploadedAi4iRows] = useState<ParsedAi4iRow[]>([]);
 
   useEffect(() => {
     getHealth()
@@ -123,6 +125,17 @@ export default function App() {
     });
   }
 
+  function handleFileParsed(parsed: import('./types').UploadParseResponse, fileName: string) {
+    setUploadedFileName(fileName);
+    if (parsed.detected_format === 'ai4i' && parsed.ai4i_rows.length > 0) {
+      setUploadedAi4iRows(parsed.ai4i_rows);
+      loadAi4iRow(parsed.ai4i_rows[0]);
+    } else if (parsed.detected_format === 'cmapss' && parsed.sensor_history.length > 0) {
+      setUploadedAi4iRows([]);
+      setHistoryText(JSON.stringify(parsed.sensor_history, null, 2));
+    }
+  }
+
   function runFailure(event: FormEvent) {
     event.preventDefault();
     void submit('failure-risk', () => predictFailureRisk(ai4i), setFailureResult);
@@ -167,6 +180,8 @@ export default function App() {
         healthDetail={healthDetail}
         fleetCount={assets.length}
         alertCount={alertCount}
+        uploadedFileName={uploadedFileName}
+        onFileParsed={handleFileParsed}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -231,6 +246,8 @@ export default function App() {
               runAnomaly={runAnomaly}
               runRul={runRul}
               runForecast={runForecast}
+              uploadedFileName={uploadedFileName}
+              uploadedAi4iRows={uploadedAi4iRows}
             />
           )}
         </main>

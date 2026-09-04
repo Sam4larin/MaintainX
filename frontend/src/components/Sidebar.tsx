@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { FileUpload } from './FileUpload';
+import type { UploadParseResponse } from '../types';
 
 export type ViewId = 'overview' | 'analytics';
 export type AnalyticsTab = 'failure-risk' | 'anomaly' | 'rul' | 'forecast';
@@ -12,6 +14,8 @@ interface SidebarProps {
   healthDetail?: string | null;
   fleetCount: number;
   alertCount: number;
+  uploadedFileName: string | null;
+  onFileParsed: (result: UploadParseResponse, fileName: string) => void;
 }
 
 function GaugeMark() {
@@ -84,6 +88,8 @@ export function Sidebar({
   healthDetail,
   fleetCount,
   alertCount,
+  uploadedFileName,
+  onFileParsed,
 }: SidebarProps) {
   const isHealthy = health === 'healthy' || health === 'ok';
   const isDegraded = health === 'degraded';
@@ -154,6 +160,22 @@ export function Sidebar({
           )}
         </div>
       </nav>
+
+      <div className="space-y-2 border-t border-ink-700/60 p-4">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-paper-300/70">Your equipment data</p>
+        <p className="text-[11px] leading-snug text-paper-300/60">
+          Upload once here — it's used across every analytics tab automatically.
+        </p>
+        <div className="rounded-lg bg-ink-950/40 p-2">
+          <FileUpload
+            expects="either"
+            onParsed={(result, fileName) => onFileParsed(result, fileName)}
+          />
+        </div>
+        {uploadedFileName && (
+          <p className="truncate text-[11px] font-medium text-moss-300">Loaded: {uploadedFileName}</p>
+        )}
+      </div>
 
       <div className="space-y-3 border-t border-ink-700/60 p-4">
         <div className="flex items-center justify-between text-xs">
